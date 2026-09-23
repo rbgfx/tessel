@@ -1,14 +1,19 @@
-# Tessel
+<h1 align="center">Tessel</h1>
 
-> Dependency-light image I/O and mutable RGBA8 image surfaces for Ruby graphics.
+<p align="center">Dependency-light image I/O and mutable RGBA8 image surfaces for Ruby graphics.</p>
 
-[![Gem version](https://badge.fury.io/rb/tessel.svg)](https://rubygems.org/gems/tessel) [![Downloads](https://img.shields.io/gem/dt/tessel?label=downloads)](https://rubygems.org/gems/tessel) [![Ruby](https://img.shields.io/badge/ruby-%3E%3D3.1-CC342D?logo=ruby&logoColor=white)](https://www.ruby-lang.org/) [![CI](https://github.com/rbgfx/tessel/actions/workflows/main.yml/badge.svg)](https://github.com/rbgfx/tessel/actions/workflows/main.yml) [![License](https://img.shields.io/badge/license-MIT-750014.svg)](LICENSE.txt)
+<p align="center">
+  <a href="https://rubygems.org/gems/tessel"><img src="https://badge.fury.io/rb/tessel.svg" alt="Gem Version"></a>
+  <a href="https://rubygems.org/gems/tessel"><img src="https://img.shields.io/gem/dt/tessel?label=downloads" alt="Downloads"></a>
+  <a href="https://www.ruby-lang.org/"><img src="https://img.shields.io/badge/ruby-%3E%3D3.1-CC342D?logo=ruby&amp;logoColor=white" alt="Ruby Version"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-MIT-750014.svg" alt="License"></a>
+</p>
 
-**[Features](#features) · [Installation](#installation) · [Requirements](#requirements) · [Quick start](#quick-start) · [Development](#development) · [License](#license) · [Website](https://rbgfx.github.io/tessel/)**
+[Features](#features) · [Installation](#installation) · [Quick Start](#quick-start)
 
----
+***
 
-Tessel is the shared pixel layer for the rbgfx ecosystem, with predictable top-down RGBA8 storage.
+Tessel is the shared pixel layer for the rbgfx ecosystem. It reads and writes common image formats and gives drawing code a small, predictable RGBA8 surface.
 
 ## Features
 
@@ -40,12 +45,12 @@ Or install the released gem directly:
 gem install tessel
 ~~~
 
-## Requirements
+### Requirements
 
 - Ruby 3.1 or newer.
 - No runtime gems beyond Ruby's standard library are required.
 
-## Quick start
+## Quick Start
 
 ~~~ruby
 require "tessel"
@@ -76,6 +81,10 @@ ruby bench/decode_bench.rb
 ruby bench/encode_bench.rb
 ruby bench/raster_bench.rb
 ~~~
+
+## Contributing
+
+Bug reports and pull requests are welcome at [rbgfx/tessel](https://github.com/rbgfx/tessel).
 
 ## License
 
