@@ -106,4 +106,37 @@ RSpec.describe Tessel do
     column.blit(column, 0, 1, h: 2, blend: :copy)
     expect((0..2).map { |y| column[0, y][0] }).to eq([1, 1, 2])
   end
+
+  it "builds a deterministic exact palette for a two-color image" do
+    image = Tessel::Image.from_rgba(2, 1, [255, 0, 0, 255, 0, 0, 255, 255].pack("C*"))
+    palette = Tessel::Quantize.palette_for(image, colors: 2)
+    indices, result_palette = Tessel::Quantize.quantize(image, palette: palette)
+
+    expect(palette).to contain_exactly([255, 0, 0], [0, 0, 255])
+    expect(indices.bytes.uniq).to contain_exactly(0, 1)
+    expect(result_palette).to eq(palette)
+  end
+
+  it "ignores fully transparent pixels when building palettes" do
+    image = Tessel::Image.from_rgba(2, 1, [255, 255, 255, 0, 12, 34, 56, 255].pack("C*"))
+    expect(Tessel::Quantize.palette_for(image)).to eq([[12, 34, 56]])
+  end
+
+  it "supports deterministic ordered and Floyd-Steinberg dithering" do
+    image = Tessel::Image.new(8, 2)
+    16.times { |index| image[index % 8, index / 8] = [index * 16, index * 8, 255 - index * 16, 255] }
+    palette = [[0, 0, 0], [255, 255, 255]]
+
+    %i[ordered floyd_steinberg].each do |dither|
+      first = Tessel::Quantize.quantize(image, palette: palette, dither: dither).first
+      second = Tessel::Quantize.quantize(image, palette: palette, dither: dither).first
+      expect(first).to eq(second)
+      expect(first.bytes.uniq).to all(be_between(0, 1))
+    end
+  end
+
+  it "provides the fixed 256-color and web-safe palettes" do
+    expect(Tessel::Quantize.fixed_palette.length).to eq(256)
+    expect(Tessel::Quantize.web_safe_palette.length).to eq(216)
+  end
 end

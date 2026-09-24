@@ -5,7 +5,7 @@ require_relative "lib/tessel/version"
 Gem::Specification.new do |spec|
   spec.name = "tessel"
   spec.version = Tessel::VERSION
-  spec.authors = ["ydah"]
+  spec.authors = ["Yudai Takada"]
   spec.email = ["t.yudai92@gmail.com"]
 
   spec.summary = "PNG and RGBA8 image primitives for Ruby graphics"

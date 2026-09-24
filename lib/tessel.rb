@@ -297,6 +297,8 @@ module Tessel
   end
 end
 
+require_relative "tessel/quantize"
+
 module Tessel
   module PNG
     module Chunk

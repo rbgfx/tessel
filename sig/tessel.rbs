@@ -1,4 +1,13 @@
 module Tessel
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class Image
+  end
+
+  module Quantize
+    def self.palette_for: (Image | Array[Image], ?colors: Integer, ?sample_limit: Integer) -> Array[[Integer, Integer, Integer]]
+    def self.fixed_palette: () -> Array[[Integer, Integer, Integer]]
+    def self.web_safe_palette: () -> Array[[Integer, Integer, Integer]]
+    def self.quantize: (Image, ?colors: Integer, ?palette: Array[[Integer, Integer, Integer]]?, ?dither: Symbol, ?serpentine: bool) -> [String, Array[[Integer, Integer, Integer]]]
+  end
 end

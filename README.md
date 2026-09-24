@@ -22,6 +22,8 @@ Tessel is the shared pixel layer for the rbgfx ecosystem. It reads and writes co
 - PPM (P3/P6) and BMP (24/32-bit) input and output.
 - Straight-alpha RGBA8 pixels with row-major, top-down storage.
 - Clipped rectangles, horizontal spans, alpha blits, masks, crop, and resize.
+- Median-cut palettes, fixed palettes, nearest-color mapping, and ordered or
+  Floyd–Steinberg dithering for indexed image output.
 - Explicit decode, unsupported-format, and pixel-limit errors.
 - Optional RBGL framebuffer conversion.
 
@@ -61,11 +63,23 @@ image.write("out.png", filter: :adaptive)
 
 copy = Tessel.read("out.png")
 puts [copy.width, copy.height, copy[20, 20]].inspect
+
+palette = Tessel::Quantize.palette_for([image, copy], colors: 32)
+indices, palette = Tessel::Quantize.quantize(image, palette: palette, dither: :floyd_steinberg)
+puts "#{indices.bytesize} indexed pixels, #{palette.length} colors"
 ~~~
 
 Use <code>fill_rect</code>, <code>hspan</code>, <code>blit</code>, and
 <code>blit_mask</code> for drawing. Image operations clip to the surface
 boundaries.
+
+`Tessel::Quantize.palette_for(images, colors:)` samples visible pixels from one
+image or an array of images and builds a deterministic median-cut RGB palette.
+`Quantize.quantize(image, palette:, dither:)` returns a binary string with one
+palette index per pixel and the palette used. Supported dithering modes are
+`:none`, `:ordered`, and `:floyd_steinberg`. Transparent pixels do not affect
+palette generation. `fixed_palette` returns the 6×6×6 color cube plus 40 gray
+levels; `web_safe_palette` returns the 216 web-safe colors.
 
 ## Development
 
