@@ -64,32 +64,33 @@ module Tessel
       errors = Array.new(image.width) { [0, 0, 0] }
       next_errors = Array.new(image.width) { [0, 0, 0] }
       bytes = image.bytes
-      (0...(image.width * image.height)).each do |index|
-        offset = index * 4
-        r, g, b, alpha = bytes.getbyte(offset), bytes.getbyte(offset + 1), bytes.getbyte(offset + 2), bytes.getbyte(offset + 3)
-        x = index % image.width
-        y = index / image.width
+      image.height.times do |y|
         reverse = dither == :floyd_steinberg && serpentine && y.odd?
-        x = image.width - x - 1 if reverse
-        if dither == :floyd_steinberg && alpha.positive?
-          input = [r, g, b].each_with_index.map { |v, c| [[v + errors[x][c].div(16), 0].max, 255].min }
-        elsif dither == :ordered
-          offset = ((MATRIX[y % 8][x % 8] * 2 - 63) * 4).div(16)
-          input = [r, g, b].map { |v| [[v + offset, 0].max, 255].min }
-        else
-          input = [r, g, b]
-        end
-        key = input.pack("C3")
-        palette_index = nearest[key] ||= closest_index(input, palette)
-        indices.setbyte(index, palette_index)
+        scan = reverse ? (image.width - 1).downto(0) : (0...image.width)
+        scan.each do |x|
+          index = y * image.width + x
+          offset = index * 4
+          r, g, b, alpha = bytes.getbyte(offset), bytes.getbyte(offset + 1), bytes.getbyte(offset + 2), bytes.getbyte(offset + 3)
+          if dither == :floyd_steinberg && alpha.positive?
+            input = [r, g, b].each_with_index.map { |v, c| [[v + errors[x][c].div(16), 0].max, 255].min }
+          elsif dither == :ordered
+            threshold = ((MATRIX[y % 8][x % 8] * 2 - 63) * 4).div(16)
+            input = [r, g, b].map { |v| [[v + threshold, 0].max, 255].min }
+          else
+            input = [r, g, b]
+          end
+          key = input.pack("C3")
+          palette_index = nearest[key] ||= closest_index(input, palette)
+          indices.setbyte(index, palette_index)
 
-        if dither == :floyd_steinberg
-          color = palette[palette_index]
-          direction = reverse ? -1 : 1
-          distribute(errors, next_errors, x, direction, input, color)
-        end
-        if x == (reverse ? 0 : image.width - 1)
-          errors, next_errors = next_errors, Array.new(image.width) { [0, 0, 0] }
+          if dither == :floyd_steinberg && alpha.positive?
+            color = palette[palette_index]
+            direction = reverse ? -1 : 1
+            distribute(errors, next_errors, x, direction, input, color)
+          end
+          if x == (reverse ? 0 : image.width - 1)
+            errors, next_errors = next_errors, Array.new(image.width) { [0, 0, 0] }
+          end
         end
       end
       [indices, palette]

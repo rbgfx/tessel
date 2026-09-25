@@ -135,6 +135,20 @@ RSpec.describe Tessel do
     end
   end
 
+  it "scans odd Floyd-Steinberg rows in reverse when serpentine" do
+    image = Tessel::Image.from_rgba(2, 2, ([127, 127, 127, 255] * 4).pack("C*"))
+    indices, = Tessel::Quantize.quantize(image, palette: [[0, 0, 0], [255, 255, 255]], dither: :floyd_steinberg)
+
+    expect(indices.bytes).to eq([0, 1, 1, 0])
+  end
+
+  it "does not diffuse color error from transparent pixels" do
+    image = Tessel::Image.from_rgba(2, 1, [0, 255, 0, 0, 127, 127, 127, 255].pack("C*"))
+    indices, = Tessel::Quantize.quantize(image, palette: [[0, 0, 0], [255, 255, 255]], dither: :floyd_steinberg)
+
+    expect(indices.bytes).to eq([0, 0])
+  end
+
   it "provides the fixed 256-color and web-safe palettes" do
     expect(Tessel::Quantize.fixed_palette.length).to eq(256)
     expect(Tessel::Quantize.web_safe_palette.length).to eq(216)
