@@ -24,7 +24,7 @@ jobs:
         uses: ruby/setup-ruby@984c0c890880bbf811283d6f09c4607c62d210a4 # v1.323.0
         with:
           ruby-version: '3.3'
-          bundler: Gemfile.lock
+          bundler: default
       - run: bundle install
       - name: Verify tag and version
         run: |
