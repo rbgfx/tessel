@@ -422,10 +422,12 @@ module Tessel
       module_function
 
       ADAM7 = [[0, 0, 8, 8], [4, 0, 8, 8], [0, 4, 4, 8], [2, 0, 4, 4], [0, 2, 2, 4], [1, 0, 2, 2], [0, 1, 1, 2]].freeze
+      MAX_METADATA_BYTES = 1_048_576
 
-      def decode(bytes, max_pixels: 16384 * 16384, verify_crc: true)
+      def decode(bytes, max_pixels: 16384 * 16384, max_metadata_bytes: MAX_METADATA_BYTES, verify_crc: true)
         bytes = String(bytes).b
         raise DecodeError, "invalid PNG signature" unless bytes.start_with?(SIGNATURE)
+        raise ArgumentError, "max_metadata_bytes must be non-negative" unless max_metadata_bytes.is_a?(Integer) && !max_metadata_bytes.negative?
 
         chunks = []
         offset = SIGNATURE.bytesize
@@ -472,12 +474,12 @@ module Tessel
             idat_ended = true
           end
         end
-        parse(chunks, max_pixels: max_pixels)
+        parse(chunks, max_pixels: max_pixels, max_metadata_bytes: max_metadata_bytes)
       rescue Zlib::Error => e
         raise DecodeError, "invalid PNG data: #{e.message}"
       end
 
-      def parse(chunks, max_pixels:)
+      def parse(chunks, max_pixels:, max_metadata_bytes:)
         raise DecodeError, "PNG is missing IHDR" unless chunks.first&.first == "IHDR"
         raise DecodeError, "invalid IHDR length" unless chunks.first[1].bytesize == 13
         width, height, bit_depth, color_type, compression, filter_method, interlace = chunks.first[1].unpack("N2C5")
@@ -561,7 +563,7 @@ module Tessel
             end
           end
         end
-        Image.from_rgba(width, height, rgba, metadata: parse_metadata(chunks))
+        Image.from_rgba(width, height, rgba, metadata: parse_metadata(chunks, max_metadata_bytes))
       end
       private_class_method :parse
 
@@ -620,12 +622,14 @@ module Tessel
       end
       private_class_method :pixel_rgba
 
-      def parse_metadata(chunks)
+      def parse_metadata(chunks, remaining)
         chunks.each_with_object({}) do |(type, data), metadata|
           case type
           when "tEXt"
             key, value = data.split("\0", 2)
             raise DecodeError, "invalid PNG tEXt chunk" unless key && !key.empty? && value
+            raise LimitError, "PNG metadata exceeds limit" if key.bytesize + value.bytesize > remaining
+            remaining -= key.bytesize + value.bytesize
             metadata[key.force_encoding("ISO-8859-1").encode("UTF-8")] = value.force_encoding("ISO-8859-1").encode("UTF-8")
           when "iTXt"
             key, rest = data.split("\0", 2)
@@ -637,7 +641,10 @@ module Tessel
             translated_end = text.index("\0", language_end + 1) if language_end
             raise DecodeError, "invalid PNG iTXt chunk" unless translated_end
             value = text.byteslice(translated_end + 1..)
-            value = Zlib::Inflate.inflate(value) if compressed == 1
+            raise LimitError, "PNG metadata exceeds limit" if key.bytesize > remaining
+            value = inflate_metadata(value, remaining - key.bytesize) if compressed == 1
+            raise LimitError, "PNG metadata exceeds limit" if value.bytesize > remaining - key.bytesize
+            remaining -= key.bytesize + value.bytesize
             value.force_encoding("UTF-8")
             raise DecodeError, "invalid PNG iTXt text" unless value.valid_encoding?
             key.force_encoding("UTF-8")
@@ -647,6 +654,23 @@ module Tessel
         end
       end
       private_class_method :parse_metadata
+
+      def inflate_metadata(data, limit)
+        output = "".b
+        inflater = Zlib::Inflate.new
+        append = lambda do |part|
+          raise LimitError, "PNG metadata exceeds limit" if part.bytesize > limit - output.bytesize
+          output << part
+        end
+        begin
+          (0...data.bytesize).step(1024) { |offset| inflater.inflate(data.byteslice(offset, 1024), &append) }
+          inflater.finish(&append)
+        ensure
+          inflater.close
+        end
+        output
+      end
+      private_class_method :inflate_metadata
     end
 
     module_function

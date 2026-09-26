@@ -86,6 +86,28 @@ RSpec.describe Tessel do
     expect { Tessel.decode(output) }.to raise_error(Tessel::LimitError)
   end
 
+  it "limits expanded PNG text metadata" do
+    png = Tessel::PNG.encode(Tessel::Image.new(1, 1))
+    large_text = "a".b * 1_100_000
+    [Zlib::Deflate.deflate(large_text), large_text].each_with_index do |text, index|
+      output = png.byteslice(0, 33).dup
+      flag = index.zero? ? "\1".b : "\0".b
+      Tessel::PNG::Chunk.write(output, "iTXt", "note\0".b + flag + "\0\0\0".b + text)
+      output << png.byteslice(33..)
+      expect { Tessel.decode(output) }.to raise_error(Tessel::LimitError, /metadata/)
+    end
+
+    compressed = png.byteslice(0, 33).dup
+    Tessel::PNG::Chunk.write(compressed, "iTXt", "note\0\1\0\0\0".b + Zlib::Deflate.deflate("safe text"))
+    expect(Tessel.decode(compressed + png.byteslice(33..)).metadata["note"]).to eq("safe text")
+
+    plain = png.byteslice(0, 33).dup
+    Tessel::PNG::Chunk.write(plain, "tEXt", "note\0".b + large_text)
+    expect { Tessel.decode(plain + png.byteslice(33..)) }.to raise_error(Tessel::LimitError, /metadata/)
+    expect(Tessel.decode(plain + png.byteslice(33..), max_metadata_bytes: 1_200_000).metadata["note"].bytesize).to eq(large_text.bytesize)
+    expect { Tessel.decode(png, max_metadata_bytes: -1) }.to raise_error(ArgumentError, /max_metadata_bytes/)
+  end
+
   it "clips blits with negative source offsets" do
     source = Tessel::Image.new(2, 1, fill: [255, 0, 0])
     target = Tessel::Image.new(3, 1)
